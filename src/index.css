@@ -262,3 +262,52 @@ progress {
   font-size: inherit;
   padding: 0.8rem;
 }
+
+.form {
+  padding: 30px;
+  margin: 20px;
+  width: 100%;
+}
+
+.form-group {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+
+.form-label {
+  font-size: 20px;
+}
+
+.form-select {
+  width: 150px;
+  padding: 8px;
+  font-size: 18px;
+  border-radius: 7px;
+  border: none;
+}
+
+.form-select:focus {
+  outline: 1px solid #1098ad;
+}
+
+.form-input {
+  width: 150px;
+  padding: 8px;
+  font-size: 18px;
+  border-radius: 7px;
+  border: none;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pag-btn:disabled {
+  color: #666;
+  background-color: #343a40;
+}

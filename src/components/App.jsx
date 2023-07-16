@@ -11,17 +11,21 @@ import Progress from './Progress';
 import FinishedScreen from './FinishedScreen';
 import Footer from './Footer';
 import Timer from './Timer';
+import PrevButton from './PrevButton';
 const url = `http://localhost:8000/questions`;
-const SECS_PER_QUESTION = 20;
+const SECS_PER_QUESTION = 10;
 const initialState = {
+  allQuestions: [],
   questions: [],
   // 'loading', 'error', 'ready', 'active' , 'finished'
   status: 'loading',
   index: 0,
-  answer: null,
+
+  answers: [],
   points: 0,
   highScore: 0,
-  secondsRemaining: null,
+  maxSecondsRemaining: null,
+  difficulty: 'normal',
 };
 
 function reducer(state, action) {
@@ -30,22 +34,42 @@ function reducer(state, action) {
       return {
         ...state,
         status: 'ready',
-        questions: action.payload,
-        secondsRemaining: SECS_PER_QUESTION * action.payload.length,
+        allQuestions: action.payload,
       };
     }
     case 'dataFailed': {
       return { ...state, status: 'error' };
     }
+    case 'setDifficulty': {
+      return { ...state, difficulty: action.payload };
+    }
     case 'start': {
-      return { ...state, status: 'active' };
+      const questions = state.allQuestions.filter((question) => {
+        if (state.difficulty === 'normal') {
+          return question.points < 30;
+        }
+        if (state.difficulty === 'hard') return question.points === 30;
+        else {
+          // easy
+          return question.points === 10;
+        }
+      });
+      return {
+        ...state,
+        status: 'active',
+        maxSecondsRemaining: Math.round(SECS_PER_QUESTION * questions.length),
+        questions,
+      };
     }
     case 'newAnswer': {
       const activeQuestion = state.questions.at(state.index);
+      const newAnswers = state.answers.slice();
+      newAnswers[state.index] = action.payload;
 
       return {
         ...state,
-        answer: action.payload,
+
+        answers: newAnswers,
         points:
           action.payload === activeQuestion.correctOption
             ? state.points + activeQuestion.points
@@ -53,13 +77,16 @@ function reducer(state, action) {
       };
     }
     case 'nextQuestion': {
-      return { ...state, answer: null, index: state.index + 1 };
+      return { ...state, index: state.index + 1 };
+    }
+    case 'prevQuestion': {
+      return { ...state, index: state.index - 1 };
     }
     case 'finish': {
       return {
         ...state,
         status: 'finished',
-        answer: null,
+        answers: [],
         highScore: state.highScore < state.points ? state.points : state.highScore,
       };
     }
@@ -67,32 +94,32 @@ function reducer(state, action) {
       return {
         ...initialState,
         highScore: state.highScore,
-        status: 'active',
-        questions: state.questions,
+        status: 'ready',
+        allQuestions: state.allQuestions,
       };
     }
 
-    case 'tick': {
-      const newSecondsRemaining = state.secondsRemaining - 1;
-      if (newSecondsRemaining === 0) {
-        // end
-        return {
-          ...state,
-          status: 'finished',
-          answer: null,
-          highScore: state.highScore < state.points ? state.points : state.highScore,
-        };
-      }
-      return { ...state, secondsRemaining: newSecondsRemaining };
-    }
     default: {
-      console.log(`error ${action.type} is not type`);
+      console.error(`error ${action.type} is not type`);
     }
   }
 }
 export default function App() {
-  const [{ questions, status, index, answer, points, highScore, secondsRemaining }, dispatch] =
-    useReducer(reducer, initialState);
+  const [
+    {
+      questions,
+      status,
+      index,
+      points,
+      highScore,
+      maxSecondsRemaining,
+      allQuestions,
+      answers,
+    },
+    dispatch,
+  ] = useReducer(reducer, initialState);
+
+  const answer = answers.at(index);
 
   const numOfQuestions = questions.length;
   const totalPoints = questions.reduce((acc, cur) => acc + cur.points, 0);
@@ -110,7 +137,7 @@ export default function App() {
         {status === 'loading' && <Loader />}
         {status === 'error' && <Error />}
         {status === 'ready' && (
-          <StartScreen numOfQuestions={numOfQuestions} dispatch={dispatch} />
+          <StartScreen numOfQuestions={allQuestions.length} dispatch={dispatch} />
         )}
         {status === 'active' && (
           <>
@@ -123,7 +150,8 @@ export default function App() {
             />
             <Question question={questions[index]} dispatch={dispatch} answer={answer} />
             <Footer>
-              <Timer dispatch={dispatch} secondsRemaining={secondsRemaining} />
+              <PrevButton dispatch={dispatch} numOfQuestions={numOfQuestions} index={index} />
+              <Timer dispatch={dispatch} maxSecondsRemaining={maxSecondsRemaining} />
               <NextButton
                 dispatch={dispatch}
                 answer={answer}
